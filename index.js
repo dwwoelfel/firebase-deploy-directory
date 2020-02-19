@@ -10,6 +10,7 @@ const {readdir} = require('fs').promises;
 const asyncPool = require('tiny-async-pool');
 const requireAuth = require('firebase-tools/lib/requireAuth');
 const api = require('firebase-tools/lib/api');
+const convertConfig = require('firebase-tools/lib/deploy/hosting/convertConfig');
 
 async function readdirRecursive(dir, prefix = '') {
   const dirents = await readdir(dir, {withFileTypes: true});
@@ -81,6 +82,11 @@ async function createFileHash(filePath) {
   });
 }
 
+function configFromFirebaseJson() {
+  const config = JSON.parse(fs.readFileSync('firebase.json'));
+  return convertConfig(config.hosting);
+}
+
 async function run({
   site,
   prefix,
@@ -88,6 +94,7 @@ async function run({
   uploadDirectory,
   isDryRun,
   token,
+  replaceConfig,
 }) {
   const filesToUpload = await readdirRecursive(uploadDirectory);
   await requireAuth(token ? {token} : {}, [
@@ -103,10 +110,13 @@ async function run({
     },
   );
   const releases = releaseRes.body.releases;
-  const latestVersion = releases[0].version;
+  const lastVersion = releases[0].version;
+  const nextConfig = replaceConfig
+    ? configFromFirebaseJson()
+    : lastVersion.config;
 
   console.log('Getting files in latest version...');
-  const files = await getAllFiles({versionName: latestVersion.name});
+  const files = await getAllFiles({versionName: lastVersion.name});
   const fileHashes = {};
 
   const reverseHashLookup = {};
@@ -150,7 +160,11 @@ async function run({
   const newVersionRes = await api.request(
     'POST',
     `/v1beta1/sites/${site}/versions`,
-    {auth: true, origin: api.hostingApiOrigin},
+    {
+      auth: true,
+      origin: api.hostingApiOrigin,
+      data: {config: nextConfig},
+    },
   );
   const newVersion = newVersionRes.body.name;
   console.log('Sending file listing for new version...');
@@ -290,6 +304,13 @@ const argv = yargs
       type: 'string',
       array: false,
     },
+    'replace-config': {
+      describe:
+        'Set to true if you want to use the config from your firebase.json, otherwise uses the config from the last release',
+      demandOption: false,
+      type: 'boolean',
+      array: false,
+    },
   })
   .help().argv;
 
@@ -317,5 +338,6 @@ if (!prefix && !ignorePrefixes) {
     uploadDirectory,
     isDryRun,
     token: argv.token,
+    replaceConfig: argv.replaceConfig,
   });
 }
