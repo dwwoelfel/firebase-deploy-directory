@@ -223,7 +223,7 @@ const argv = yargs
     },
     subpath: {
       describe:
-        'The subpath that the directory should be deployed to (e.g. `schema` for `https://example.com/schema`',
+        'The subpath that the directory should be deployed to (e.g. `schema` for `https://example.com/schema`)',
       demandOption: true,
       type: 'string',
       array: false,
