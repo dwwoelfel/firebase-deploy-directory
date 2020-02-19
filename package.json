@@ -1,5 +1,6 @@
 {
   "name": "firebase-deploy-directory",
+  "homepage": "https://github.com/dwwoelfel/firebase-deploy-directory",
   "version": "1.0.0",
   "description": "Deploy a directory to Firebase hosting",
   "main": "index.js",
@@ -14,5 +15,15 @@
   },
   "bin": {
     "firebase-deploy-directory": "./index.js"
+  },
+  "scripts": {
+    "format": "prettier --write \"**/*.{js,jsx,json,md}\""
+  },
+  "devDependencies": {
+    "prettier": "^1.19.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dwwoelfel/firebase-deploy-directory.git"
   }
 }

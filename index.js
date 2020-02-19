@@ -81,7 +81,14 @@ async function createFileHash(filePath) {
   });
 }
 
-async function run({site, prefix, uploadDirectory, isDryRun, token}) {
+async function run({
+  site,
+  prefix,
+  ignorePrefixes,
+  uploadDirectory,
+  isDryRun,
+  token,
+}) {
   const filesToUpload = await readdirRecursive(uploadDirectory);
   await requireAuth(token ? {token} : {}, [
     'https://www.googleapis.com/auth/cloud-platform',
@@ -102,20 +109,42 @@ async function run({site, prefix, uploadDirectory, isDryRun, token}) {
   const files = await getAllFiles({versionName: latestVersion.name});
   const fileHashes = {};
 
-  const pathPrefix = `/${prefix}/`;
-  for (const file of files) {
-    if (!file.path.startsWith(pathPrefix)) {
-      fileHashes[file.path] = file.hash;
-    }
-  }
-  console.log('Hashing files for upload...');
   const reverseHashLookup = {};
-  await asyncPool(8, filesToUpload, async fileToUpload => {
-    const firebaseFilePath = `${pathPrefix}${fileToUpload.relativePath}`;
-    const hash = await createFileHash(fileToUpload.path);
-    reverseHashLookup[hash] = {firebaseFilePath, path: fileToUpload.path};
-    fileHashes[firebaseFilePath] = hash;
-  });
+  if (prefix) {
+    const pathPrefix = `/${prefix}/`;
+    for (const file of files) {
+      if (!file.path.startsWith(pathPrefix)) {
+        fileHashes[file.path] = file.hash;
+      }
+    }
+
+    console.log('Hashing files for upload...');
+    await asyncPool(8, filesToUpload, async fileToUpload => {
+      const firebaseFilePath = `${pathPrefix}${fileToUpload.relativePath}`;
+      const hash = await createFileHash(fileToUpload.path);
+      reverseHashLookup[hash] = {firebaseFilePath, path: fileToUpload.path};
+      fileHashes[firebaseFilePath] = hash;
+    });
+  }
+
+  if (ignorePrefixes) {
+    const ignorePathPrefixes = ignorePrefixes.map(prefix => `/${prefix}/`);
+    for (const file of files) {
+      // Keep files in subpaths we're ignoring
+      if (
+        ignorePathPrefixes.some(pathPrefix => file.path.startsWith(pathPrefix))
+      ) {
+        fileHashes[file.path] = file.hash;
+      }
+    }
+    console.log('Hashing files for upload...');
+    await asyncPool(8, filesToUpload, async fileToUpload => {
+      const firebaseFilePath = `/${fileToUpload.relativePath}`;
+      const hash = await createFileHash(fileToUpload.path);
+      reverseHashLookup[hash] = {firebaseFilePath, path: fileToUpload.path};
+      fileHashes[firebaseFilePath] = hash;
+    });
+  }
 
   console.log('Creating new version...');
   const newVersionRes = await api.request(
@@ -185,7 +214,15 @@ async function run({site, prefix, uploadDirectory, isDryRun, token}) {
       {
         auth: true,
         origin: api.hostingApiOrigin,
-        data: {message: 'Deployed from graphql docs'},
+        data: {
+          message: prefix
+            ? `Deployed subpath ${'`' +
+                prefix +
+                '`'} with firebase-deploy-directory`
+            : `Deployed with firebase-deploy-directory, excluding subpaths ${ignorePrefixes.join(
+                ',',
+              )}`,
+        },
       },
     );
   } else {
@@ -224,9 +261,16 @@ const argv = yargs
     subpath: {
       describe:
         'The subpath that the directory should be deployed to (e.g. `schema` for `https://example.com/schema`)',
-      demandOption: true,
+      demandOption: false,
       type: 'string',
       array: false,
+    },
+    'exclude-subpath': {
+      describe:
+        'If deploying everthing except subpaths, the subpaths to ignore',
+      demandOption: false,
+      type: 'string',
+      array: true,
     },
     directory: {
       describe: 'The directory to upload',
@@ -250,7 +294,28 @@ const argv = yargs
   .help().argv;
 
 const site = argv.project;
-const prefix = normalizePrefix(argv.subpath);
+const prefix = argv.subpath ? normalizePrefix(argv.subpath) : null;
+const ignorePrefixes = argv.excludeSubpath
+  ? argv.excludeSubpath.map(normalizePrefix)
+  : null;
 const uploadDirectory = argv.directory;
 const isDryRun = argv.commit ? false : true;
-run({site, prefix, uploadDirectory, isDryRun, token: argv.token});
+
+console.log(argv);
+
+if (!prefix && !ignorePrefixes) {
+  console.error('Must provide one of --subpath or --exclude-subpath');
+  process.exit(1);
+} else if (prefix && ignorePrefixes) {
+  console.error('Must provide only one of --subpath or --exclude-subpath');
+  process.exit(1);
+} else {
+  run({
+    site,
+    ignorePrefixes,
+    prefix,
+    uploadDirectory,
+    isDryRun,
+    token: argv.token,
+  });
+}

@@ -2,7 +2,6 @@
 
 Upload directory to firebase hosting
 
-
 `firebase-deploy-directory --project <project-name> --subpath <subpath> --directory <directory-to-upload> --token <ci-token> --commit`
 
 ```
