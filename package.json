@@ -1,0 +1,18 @@
+{
+  "name": "firebase-deploy-directory",
+  "version": "1.0.0",
+  "description": "Deploy a directory to Firebase hosting",
+  "main": "index.js",
+  "author": "Daniel Woelfel <dwwoelfel@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "firebase-tools": "^7.13.1",
+    "node-fetch": "^2.6.0",
+    "tiny-async-pool": "^1.1.0",
+    "yargs": "^15.1.0",
+    "zlib": "^1.0.5"
+  },
+  "bin": {
+    "firebase-deploy-directory": "./index.js"
+  }
+}
