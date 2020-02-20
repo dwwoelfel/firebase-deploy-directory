@@ -322,8 +322,6 @@ const ignorePrefixes = argv.excludeSubpath
 const uploadDirectory = argv.directory;
 const isDryRun = argv.commit ? false : true;
 
-console.log(argv);
-
 if (!prefix && !ignorePrefixes) {
   console.error('Must provide one of --subpath or --exclude-subpath');
   process.exit(1);
