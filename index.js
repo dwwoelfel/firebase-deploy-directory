@@ -337,5 +337,8 @@ if (!prefix && !ignorePrefixes) {
     isDryRun,
     token: argv.token,
     replaceConfig: argv.replaceConfig,
+  }).catch(e => {
+    console.error(e);
+    process.exit(1);
   });
 }
