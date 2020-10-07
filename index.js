@@ -65,6 +65,26 @@ async function uploadFile({uploadUrl, hash, path}) {
   }
 }
 
+const MAX_RETRIES = 3;
+
+async function uploadFileWithRetry({uploadUrl, hash, path, attempts}) {
+  try {
+    await uploadFile({uploadUrl, hash, path});
+  } catch (e) {
+    if ((attempts || 0) < MAX_RETRIES) {
+      console.log('Error uploading file, trying again');
+      await uploadFileWithRetry({
+        uploadUrl,
+        hash,
+        path,
+        attempts: (attempts || 0) + 1,
+      });
+    } else {
+      throw e;
+    }
+  }
+}
+
 async function createFileHash(filePath) {
   const hasher = crypto.createHash('sha256');
   const gzipper = zlib.createGzip({level: 9});
@@ -207,7 +227,7 @@ async function run({
         );
         process.exit(1);
       }
-      await uploadFile({
+      await uploadFileWithRetry({
         uploadUrl,
         hash,
         path: fileToUpload.path,
