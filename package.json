@@ -1,7 +1,7 @@
 {
   "name": "firebase-deploy-directory",
   "homepage": "https://github.com/dwwoelfel/firebase-deploy-directory",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Deploy a directory to Firebase hosting",
   "main": "index.js",
   "author": "Daniel Woelfel <dwwoelfel@gmail.com>",
