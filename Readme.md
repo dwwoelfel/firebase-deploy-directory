@@ -1,3 +1,7 @@
+## firebase-deploy-directory
+
+![npm](https://img.shields.io/npm/v/firebase-deploy-directory?style=flat-square)
+
 Use firebase-deploy-directory as a replacement for `firebase deploy` if you use Firebase hosting and want to deploy different parts of your site from different repos or directories.
 
 For example, if your main website is hosted at `https://example.com` and you have a separate repo for your blog hosted at `https://example.com/blog`.
